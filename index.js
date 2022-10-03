@@ -19,7 +19,13 @@ client.on('ready', () => {
         database:process.env.DB_NAME
     });
 
-    dbConnection.connect();
+    dbConnection.connect((err) => {
+        if(err){
+          console.log('Error connecting to Db');
+          return;
+        }
+        console.log('Connection established');
+      });
 });
 
 client.on('messageCreate', msg => {
@@ -38,7 +44,15 @@ client.on('messageCreate', msg => {
         // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
         
         var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', @result);'
-        dbConnection.query(query);
+        dbConnection.query(query, (err,rows) => {
+            if(err){
+                console.log("Data Failed To Store - " + query)
+                msg.react('🚫');
+            };
+          
+            console.log("Data Stored Successfully");
+            msg.react('✅');
+          });
      }
     });
 
