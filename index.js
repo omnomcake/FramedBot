@@ -47,11 +47,11 @@ client.on('messageCreate', msg => {
         dbConnection.query(query, (err,rows) => {
             if(err){
                 console.log("Data Failed To Store - " + query)
-                msg.react('🚫');
+                //msg.react('🚫');
             };
           
             console.log("Data Stored Successfully");
-            msg.react('✅');
+            //msg.react('✅');
           });
      }
     });
