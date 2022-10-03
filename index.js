@@ -31,11 +31,13 @@ client.on('messageCreate', msg => {
         var score = (msg.content.match(/🟥/g) || []).length;
         var index = msg.content.indexOf('#');
         var gameNum = msg.content.substring(index+1, index+4);
+        var guildId = msg.guildId;
+        var guildName = msg.guild.name;
 
         // msg.reply(`Hello ${msg.author.username}`);
         // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
         
-        var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + gameNum + ', ' + score + ', @result);'
+        var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', @result);'
         dbConnection.query(query);
      }
     });
