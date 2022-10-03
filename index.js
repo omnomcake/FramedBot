@@ -30,7 +30,7 @@ client.on('ready', () => {
 
 client.on('messageCreate', msg => {
     // You can view the msg object here with console.log(msg)
-    console.log(msg)
+    // console.log(msg)
      if (msg.content.includes('Framed #') && (msg.content.includes('🟥') || msg.content.includes('🟩'))) {
         var userId = msg.author.id;
         var userName = msg.author.username;
@@ -47,11 +47,11 @@ client.on('messageCreate', msg => {
         dbConnection.query(query, (err,rows) => {
             if(err){
                 console.log("Data Failed To Store - " + query)
-                //msg.react('🚫');
+                // msg.react('🚫');
             };
           
             console.log("Data Stored Successfully");
-            //msg.react('✅');
+            // msg.react('✅');
           });
      }
     });
