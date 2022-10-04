@@ -13,13 +13,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 client.on('ready', () => {
     console.log('Logged in as ' + client.user.tag + '!');
 
-    dbConnection = mySql.createConnection({
-        host:process.env.DB_HOST,
-        port:process.env.DB_PORT,
-        user:process.env.DB_USER,
-        password:process.env.DB_PASSWORD,
-        database:process.env.DB_NAME
-    });
+    dbConnection = connectDb();
 
     dbConnection.connect((err) => {
         if(err){
@@ -27,14 +21,15 @@ client.on('ready', () => {
           return;
         }
         console.log('Connection established');
+        dbConnection.end();
       });
 
-    var task = cron.schedule('0 0 * * *', () =>{
+    var task = cron.schedule('30 12 * * *', () =>{
         console.log('Checking for completed games at midnight eastern');
     }, {
         scheduled: true,
         timezone: "America/New_York"
-    });
+    });         
 
     task.start();
 });
@@ -55,18 +50,28 @@ client.on('messageCreate', msg => {
         // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
         
         var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', @result);'
-        dbConnection.query(query, (err) => {
+
+        var dbConn = connectDb();
+        dbConn.connect(function(err){
             if(err){
-                console.log("Data Failed To Store - " + query)
-                // msg.react('🚫');
+                console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                return
             }
-            else{
-                console.log("Data Stored Successfully");
-            }
-          
-            
-            // msg.react('✅');
-          });
+
+            console.log("[" + Date.now() + "] Connected to Database");
+            dbConn.query(query, (err) => {
+                if(err){
+                    console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+                }
+                else{
+                    console.log("[" + new Date().toISOString() + "] Data Stored Successfully");
+                }
+
+                dbConn.end();
+              });
+        })
+        
+        
      }
     });
 
@@ -82,15 +87,16 @@ client.on('messageCreate', msg => {
             var repeat = interaction.options.getBoolean('repeating') || true;
             var server = interaction.guildId;
             var serverName = interaction.guild.name;
+            var channel = interaction.channelId;
             
-            var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'1\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
+            var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
             dbConnection.query(query, (err) => {
                 if(err){
-                    console.log("Data Failed To Store - " + query)
+                    console.log("[" + new Date().toISOString() + "]Data Failed To Store - " + query)
                     // msg.react('🚫');
                 }
                 else{
-                    console.log("Save Settings - Data Stored Successfully");
+                    console.log("[" + new Date().toISOString() + "]Save Settings - Data Stored Successfully");
                 }
                 
                 // msg.react('✅');
@@ -100,3 +106,13 @@ client.on('messageCreate', msg => {
 
 // Authenticate
 client.login(process.env.DISCORD_TOKEN)
+
+function connectDb(){
+    return mySql.createConnection({
+        host:process.env.DB_HOST,
+        port:process.env.DB_PORT,
+        user:process.env.DB_USER,
+        password:process.env.DB_PASSWORD,
+        database:process.env.DB_NAME
+    });
+}
