@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { Client, GatewayIntentBits, ConnectionService } = require('discord.js');
 const mySql = require('mysql');
+
 var dbConnection;
 
 // Create a new client instance
@@ -44,17 +45,47 @@ client.on('messageCreate', msg => {
         // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
         
         var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', @result);'
-        dbConnection.query(query, (err,rows) => {
+        dbConnection.query(query, (err) => {
             if(err){
                 console.log("Data Failed To Store - " + query)
                 // msg.react('🚫');
-            };
+            }
+            else{
+                console.log("Data Stored Successfully");
+            }
           
-            console.log("Data Stored Successfully");
+            
             // msg.react('✅');
           });
      }
     });
 
+    client.on('interactionCreate', async interaction => {
+        if (!interaction.isChatInputCommand()) return;
+
+	    const { commandName } = interaction;
+
+        if(commandName === 'gamestart'){
+            
+            var duration = interaction.options.getInteger('length') || 7;
+            var start = interaction.options.getString('date') || new Date().toISOString().split('T')[0];
+            var repeat = interaction.options.getBoolean('repeating') || true;
+            var server = interaction.guildId;
+            var serverName = interaction.guild.name;
+            
+            var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'1\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
+            dbConnection.query(query, (err) => {
+                if(err){
+                    console.log("Data Failed To Store - " + query)
+                    // msg.react('🚫');
+                }
+                else{
+                    console.log("Save Settings - Data Stored Successfully");
+                }
+                
+                // msg.react('✅');
+              });
+        }
+    })
 // Authenticate
 client.login(process.env.DISCORD_TOKEN)
