@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const { Client, GatewayIntentBits, ConnectionService } = require('discord.js');
 const mySql = require('mysql');
+const cron = require('node-cron');
 
 var dbConnection;
 
@@ -27,6 +28,15 @@ client.on('ready', () => {
         }
         console.log('Connection established');
       });
+
+    var task = cron.schedule('0 0 * * *', () =>{
+        console.log('Checking for completed games at midnight eastern');
+    }, {
+        scheduled: true,
+        timezone: "America/New_York"
+    });
+
+    task.start();
 });
 
 client.on('messageCreate', msg => {
@@ -87,5 +97,6 @@ client.on('messageCreate', msg => {
               });
         }
     })
+
 // Authenticate
 client.login(process.env.DISCORD_TOKEN)
