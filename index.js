@@ -24,7 +24,7 @@ client.on('ready', () => {
         dbConnection.end();
       });
 
-    var task = cron.schedule('30 12 * * *', () =>{
+    var task = cron.schedule('0 * * * *', () =>{
         console.log('Checking for completed games at midnight eastern');
     }, {
         scheduled: true,
@@ -69,9 +69,7 @@ client.on('messageCreate', msg => {
 
                 dbConn.end();
               });
-        })
-        
-        
+        })                
      }
     });
 
@@ -90,17 +88,25 @@ client.on('messageCreate', msg => {
             var channel = interaction.channelId;
             
             var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
-            dbConnection.query(query, (err) => {
+            var dbConn = connectDb();
+            dbConn.connect(function(err){
                 if(err){
-                    console.log("[" + new Date().toISOString() + "]Data Failed To Store - " + query)
-                    // msg.react('🚫');
+                    console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                    return
                 }
-                else{
-                    console.log("[" + new Date().toISOString() + "]Save Settings - Data Stored Successfully");
-                }
-                
-                // msg.react('✅');
-              });
+
+                console.log("[" + Date.now() + "] Connected to Database");
+                dbConn.query(query, (err) => {
+                    if(err){
+                        console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+                    }
+                    else{
+                        console.log("[" + new Date().toISOString() + "] Settings Data Stored Successfully");
+                    }
+
+                    dbConn.end();
+                });
+            })   
         }
     })
 
