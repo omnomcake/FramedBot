@@ -46,6 +46,9 @@ client.on('messageCreate', msg => {
         var guildId = msg.guildId;
         var guildName = msg.guild.name;
 
+        if(score > 6){
+            score = 6;
+        }
         // msg.reply(`Hello ${msg.author.username}`);
         // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
         
