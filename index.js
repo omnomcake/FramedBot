@@ -111,6 +111,33 @@ client.on('messageCreate', msg => {
                 });
             })   
         }
+        else if(commandName === 'gameend'){
+            // using Dial Up hard coded for testing for now. 
+            //var server = interaction.guildId;
+            var server = '477221061130190849';
+
+            var query = 'call sp_endGame(\'' + server + '\')';
+            var dbConn = connectDb();
+
+            dbConn.connect(function(err){
+                if(err){
+                    console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                    return
+                }
+
+                console.log("[" + Date.now() + "] Connected to Database");
+                dbConn.query(query, (err, results) => {
+                    if(err){
+                        console.log("[" + new Date().toISOString() + "] Data Failed To Retrieve - " + query);
+                        return;
+                    }
+                    
+                    var resultTable = results[1];
+
+                    dbConn.end();
+                });
+            }) 
+        }
     })
 
 // Authenticate
