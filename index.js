@@ -9,6 +9,9 @@ var dbConnection;
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, 
     GatewayIntentBits.MessageContent] });
+var lastMessageId;
+var channel;
+
 
 client.on('ready', () => {
     console.log('Logged in as ' + client.user.tag + '!');
@@ -37,43 +40,7 @@ client.on('ready', () => {
 client.on('messageCreate', msg => {
     // You can view the msg object here with console.log(msg)
     // console.log(msg)
-     if (msg.content.includes('Framed #') && (msg.content.includes('🟥') || msg.content.includes('🟩'))) {
-        var userId = msg.author.id;
-        var userName = msg.author.username;
-        var score = (msg.content.match(/🟥/g) || []).length;
-        var index = msg.content.indexOf('#');
-        var gameNum = msg.content.substring(index+1, index+4);
-        var guildId = msg.guildId;
-        var guildName = msg.guild.name;
-
-        if(score > 6){
-            score = 6;
-        }
-        // msg.reply(`Hello ${msg.author.username}`);
-        // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
-        
-        var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', @result);'
-
-        var dbConn = connectDb();
-        dbConn.connect(function(err){
-            if(err){
-                console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
-                return
-            }
-
-            console.log("[" + Date.now() + "] Connected to Database");
-            dbConn.query(query, (err) => {
-                if(err){
-                    console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
-                }
-                else{
-                    console.log("[" + new Date().toISOString() + "] Data Stored Successfully");
-                }
-
-                dbConn.end();
-              });
-        })                
-     }
+        checkMessage(msg)
     });
 
     client.on('interactionCreate', async interaction => {
@@ -88,7 +55,7 @@ client.on('messageCreate', msg => {
             var repeat = interaction.options.getBoolean('repeating') || true;
             var server = interaction.guildId;
             var serverName = interaction.guild.name;
-            var channel = interaction.channelId;
+            channel = interaction.channelId;
             
             var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
             var dbConn = connectDb();
@@ -138,6 +105,54 @@ client.on('messageCreate', msg => {
                 });
             }) 
         }
+        else if(commandName === 'catchup'){
+            var guildId = interaction.guildId;
+            channel = interaction.channel;
+            lastMessageId = channel.lastMessageId;
+            var query = 'select framed_server_settings_last_message_id from framed_server_settings where framed_server_settings_server_id in (select framed_servers_id from framed_servers where framed_servers_discord_id = ' + guildId + ') '
+
+            var dbConn = connectDb();
+            dbConn.connect(function(err){
+                if(err){
+                    console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                    return
+                }
+
+                console.log("[" + Date.now() + "] Connected to Database");
+                dbConn.query(query, async (err, results) => {
+                    if(err){
+                        console.log("[" + new Date().toISOString() + "] Data Failed To Retrieve - " + query);
+                        return;
+                    }
+                    
+                    lastMessageId = results[0]['framed_server_settings_last_message_id'];
+                    let messages = [];
+
+                    let message = await channel.messages
+                        .fetch({ limit: 1 })
+                        .then(messagePage => (messagePage.size === 1 ? messagePage.at(0) : null));
+
+                    while (message) {
+                        await channel.messages
+                        .fetch({ limit: 100, before: message.id })
+                        .then(messagePage => {
+                            messagePage.forEach(msg => {
+                                if(msg.id > lastMessageId){
+                                    checkMessage(msg);
+                                }
+                            });
+
+                            // Update our message pointer to be last message in page of messages
+                            message = 0 < messagePage.size ? messagePage.at(messagePage.size - 1) : null;
+                        })
+                    }
+
+                    dbConn.end();
+                });
+            })
+
+            var test = 1;
+        }
     })
 
 // Authenticate
@@ -151,4 +166,45 @@ function connectDb(){
         password:process.env.DB_PASSWORD,
         database:process.env.DB_NAME
     });
+}
+
+// function to process a message and submit it to DB if it's a result. 
+function checkMessage(msg){
+    if (msg.content.includes('Framed #') && (msg.content.includes('🟥') || msg.content.includes('🟩'))) {
+        var userId = msg.author.id;
+        var userName = msg.author.username;
+        var score = (msg.content.match(/🟥/g) || []).length;
+        var index = msg.content.indexOf('#');
+        var gameNum = msg.content.substring(index+1, index+4);
+        var guildId = msg.guildId;
+        var guildName = msg.guild.name;
+        messageId = msg.id;
+        if(score > 6){
+            score = 6;
+        }
+        // msg.reply(`Hello ${msg.author.username}`);
+        // msg.reply('Miss Count: ' + (msg.content.match(/🟥/g) || []).length);
+        
+        var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', \'' + messageId + '\', @result);'
+
+        var dbConn = connectDb();
+        dbConn.connect(function(err){
+            if(err){
+                console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                return
+            }
+
+            console.log("[" + Date.now() + "] Connected to Database");
+            dbConn.query(query, (err) => {
+                if(err){
+                    console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+                }
+                else{
+                    console.log("[" + new Date().toISOString() + "] Data Stored Successfully");
+                }
+
+                dbConn.end();
+              });
+        })                
+     }
 }

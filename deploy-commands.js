@@ -9,9 +9,11 @@ var optionCommand = new SlashCommandBuilder().setName('gamestart').setDescriptio
     
 var gameEndCommand = new SlashCommandBuilder().setName('gameend').setDescription('Ends the current game, posts scores, and starts a new game for the server.');
 
+var catchUpCommand = new SlashCommandBuilder().setName('catchup').setDescription('Catches up the discord bot on any results it may have missed')
 const commands = [
 	optionCommand,
-    gameEndCommand
+    gameEndCommand,
+    catchUpCommand
 ]
 	.map(command => command.toJSON());
 
