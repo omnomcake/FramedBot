@@ -143,6 +143,7 @@ client.on('interactionCreate', async interaction => {
                     }
                     
                     lastMessageId = results[0]['framed_server_settings_last_message_id'];
+                    console.log(lastMessageId);
                     let messages = [];
 
                     let message = await client.channels.cache.get(channel).messages
