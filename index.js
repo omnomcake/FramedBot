@@ -12,6 +12,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 var lastMessageId;
 var channel;
 var waitForDb;
+var userId;
 
 
 client.on('ready', () => {
@@ -55,9 +56,9 @@ client.on('interactionCreate', async interaction => {
         }
         else if(commandName === 'gameend'){
             // using Dial Up hard coded for testing for now. 
-            //var server = interaction.guildId;
             var server = interaction.guildId;
-
+            channel = interaction.channelId;
+            userId = interaction.user.id;
             var query = 'call sp_endGame(\'' + server + '\')';
             var dbConn = connectDb();
 
@@ -73,7 +74,14 @@ client.on('interactionCreate', async interaction => {
                         console.log("[" + new Date().toISOString() + "] Data Failed To Retrieve - " + query);
                         return;
                     }
-                    
+                    if(results[0][0]['NO SETTINGS'] === undefined){
+                        
+                    }
+                    else{
+                        client.channels.cache.get(channel).send('<@' + userId + '> No Scores Channel Found - Use /setscore function in the channel you want to report scores to.');
+                        return;
+                    }
+
                     var resultTable = results[1];                    
 
                     dbConn.end();
@@ -218,7 +226,7 @@ function connectDb(){
 // function to process a message and submit it to DB if it's a result. 
 function checkMessage(msg){
     if (msg.content.includes('Framed #') && (msg.content.includes('🟥') || msg.content.includes('🟩'))) {
-        var userId = msg.author.id;
+        userId = msg.author.id;
         var userName = msg.author.username;
         var score = (msg.content.match(/🟥/g) || []).length;
         var index = msg.content.indexOf('#');
