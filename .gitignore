@@ -126,3 +126,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 prod.env
+.vs/FramedBot/v16/.suo
+.vs/ProjectSettings.json
+.vs/slnx.sqlite
+.vs/VSWorkspaceState.json

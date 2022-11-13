@@ -14,7 +14,6 @@ var channel;
 var waitForDb;
 var userId;
 
-
 client.on('ready', () => {
     console.log('Logged in as ' + client.user.tag + '!');
 
@@ -42,8 +41,16 @@ client.on('ready', () => {
 client.on('messageCreate', msg => {
     // You can view the msg object here with console.log(msg)
     // console.log(msg)
-        checkMessage(msg)
+        dbConnection = connectDb();
+        dbConnection.connect(function(err){
+            if(err){
+                console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                return
+            }
+        checkMessage(msg);
+        dbConnection.end();
     });
+});
 
 client.on('interactionCreate', async interaction => {
         if (!interaction.isChatInputCommand()) return;
@@ -117,19 +124,19 @@ client.on('interactionCreate', async interaction => {
         }
         else if(commandName === 'catchup'){
             var guildId = interaction.guildId;
-            channel = interaction.channel;
+            channel = interaction.channelId;
             lastMessageId = channel.lastMessageId;
             var query = 'select framed_server_settings_last_message_id from framed_server_settings where framed_server_settings_server_id in (select framed_servers_id from framed_servers where framed_servers_discord_id = ' + guildId + ') '
 
-            var dbConn = connectDb();
-            dbConn.connect(function(err){
+            dbConnection = connectDb();
+            dbConnection.connect(function(err){
                 if(err){
                     console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
                     return
                 }
 
                 console.log("[" + Date.now() + "] Connected to Database");
-                dbConn.query(query, async (err, results) => {
+                dbConnection.query(query, async (err, results) => {
                     if(err){
                         console.log("[" + new Date().toISOString() + "] Data Failed To Retrieve - " + query);
                         return;
@@ -138,12 +145,12 @@ client.on('interactionCreate', async interaction => {
                     lastMessageId = results[0]['framed_server_settings_last_message_id'];
                     let messages = [];
 
-                    let message = await channel.messages
+                    let message = await client.channels.cache.get(channel).messages
                         .fetch({ limit: 1 })
                         .then(messagePage => (messagePage.size === 1 ? messagePage.at(0) : null));
 
                     while (message) {
-                        await channel.messages
+                        await client.channels.cache.get(channel).messages
                         .fetch({ limit: 100, before: message.id })
                         .then(messagePage => {
                             messagePage.forEach(msg => {
@@ -157,7 +164,7 @@ client.on('interactionCreate', async interaction => {
                         })
                     }
 
-                    dbConn.end();
+                    dbConnection.end();
                 });
             })
             await interaction.reply({ content: 'Catchup Processing.', ephemeral: true });
@@ -242,25 +249,23 @@ function checkMessage(msg){
         
         var query = 'call sp_addScore(\'' + userId + '\', \'' + userName + '\', ' + '\'' + guildId + '\', \'' + guildName + '\', ' + gameNum + ', ' + score + ', \'' + messageId + '\', @result);'
 
-        var dbConn = connectDb();
-        dbConn.connect(function(err){
+        dbConnection.query(query, (err) => {
             if(err){
-                console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
-                return
+                console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+            }
+            else{
+                console.log("[" + new Date().toISOString() + "] Data Stored Successfully");
             }
 
-            console.log("[" + Date.now() + "] Connected to Database");
-            dbConn.query(query, (err) => {
-                if(err){
-                    console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
-                }
-                else{
-                    console.log("[" + new Date().toISOString() + "] Data Stored Successfully");
-                }
+        });
+        // dbConnection.connect(function(err){
+        //     if(err){
+        //         console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+        //         return
+        //     }
 
-                dbConn.end();
-              });
-        })                
+            
+        // })                
      }
 }
 
@@ -294,11 +299,3 @@ function saveSettings(interaction){
     })  
 }
 
-function checkDbBlock(){
-    if(waitForDb){
-        checkDbBlock();        
-    }
-    else{
-        return;
-    }
-}
