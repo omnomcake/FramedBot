@@ -149,7 +149,8 @@ client.on('interactionCreate', async interaction => {
                     let message = await client.channels.cache.get(channel).messages
                         .fetch({ limit: 1 })
                         .then(messagePage => (messagePage.size === 1 ? messagePage.at(0) : null));
-
+                    
+                    console.log(message.content);
                     while (message) {
                         await client.channels.cache.get(channel).messages
                         .fetch({ limit: 100, before: message.id })
