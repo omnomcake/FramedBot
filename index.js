@@ -11,6 +11,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
     GatewayIntentBits.MessageContent] });
 var lastMessageId;
 var channel;
+var waitForDb;
 
 
 client.on('ready', () => {
@@ -27,14 +28,14 @@ client.on('ready', () => {
         dbConnection.end();
       });
 
-    var task = cron.schedule('0 * * * *', () =>{
-        console.log('Checking for completed games at midnight eastern');
-    }, {
-        scheduled: true,
-        timezone: "America/New_York"
-    });         
+    // var task = cron.schedule('0 * * * *', () =>{
+    //     console.log('Checking for completed games at midnight eastern');
+    // }, {
+    //     scheduled: true,
+    //     timezone: "America/New_York"
+    // });         
 
-    task.start();
+    // task.start();
 });
 
 client.on('messageCreate', msg => {
@@ -43,40 +44,13 @@ client.on('messageCreate', msg => {
         checkMessage(msg)
     });
 
-    client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async interaction => {
         if (!interaction.isChatInputCommand()) return;
 
 	    const { commandName } = interaction;
 
-        if(commandName === 'gamestart'){
-            
-            var duration = interaction.options.getInteger('length') || 7;
-            var start = interaction.options.getString('date') || new Date().toISOString().split('T')[0];
-            var repeat = interaction.options.getBoolean('repeating') || true;
-            var server = interaction.guildId;
-            var serverName = interaction.guild.name;
-            channel = interaction.channelId;
-            
-            var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
-            var dbConn = connectDb();
-            dbConn.connect(function(err){
-                if(err){
-                    console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
-                    return
-                }
-
-                console.log("[" + Date.now() + "] Connected to Database");
-                dbConn.query(query, (err) => {
-                    if(err){
-                        console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
-                    }
-                    else{
-                        console.log("[" + new Date().toISOString() + "] Settings Data Stored Successfully");
-                    }
-
-                    dbConn.end();
-                });
-            })   
+        if(commandName === 'gamestart'){            
+            saveSettings(interaction); 
         }
         else if(commandName === 'gameend'){
             // using Dial Up hard coded for testing for now. 
@@ -176,8 +150,50 @@ client.on('messageCreate', msg => {
                     dbConn.end();
                 });
             })
+        }
+        else if(commandName === 'setscore'){
+            var guildId = interaction.guildId;
+            channel = interaction.channel;
+            
+            waitForDb = true;
+            var duration = interaction.options.getInteger('length') || 7;
+            var start = interaction.options.getString('date') || new Date().toISOString().split('T')[0];
+            var repeat = interaction.options.getBoolean('repeating') || true;
+            var server = interaction.guildId;
+            var serverName = interaction.guild.name;
+            channel = interaction.channelId;
+            
+            var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
+            var dbConn = connectDb();
+            dbConn.connect(function(err){
+                if(err){
+                    console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+                    waitForDb = false;
+                    return;
+                }
 
-            var test = 1;
+                console.log("[" + Date.now() + "] Connected to Database");
+                dbConn.query(query, (err) => {
+                    if(err){
+                        console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+                    }
+                    else{
+                        console.log("[" + new Date().toISOString() + "] Settings Data Stored Successfully");
+                    }
+
+                    var query = 'call sp_saveScoreChannel(\'' + guildId + '\', \'' + channel + '\')'; 
+                    dbConn.query(query, (err) => {
+                        if(err){
+                            console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+                        }
+                        else{
+                            console.log("[" + new Date().toISOString() + "] Settings Data Stored Successfully");
+                        }
+    
+                        dbConn.end();
+                    });
+                });
+            })              
         }
     })
 
@@ -233,4 +249,45 @@ function checkMessage(msg){
               });
         })                
      }
+}
+
+function saveSettings(interaction){
+    var duration = interaction.options.getInteger('length') || 7;
+    var start = interaction.options.getString('date') || new Date().toISOString().split('T')[0];
+    var repeat = interaction.options.getBoolean('repeating') || true;
+    var server = interaction.guildId;
+    var serverName = interaction.guild.name;
+    channel = interaction.channelId;
+    
+    var query = 'call sp_saveSettings(\'' + server + '\', \'' + serverName + '\', \'' + channel + '\', ' + duration + ', \'' + start + '\', ' + repeat + ')';
+    var dbConn = connectDb();
+    dbConn.connect(function(err){
+        if(err){
+            console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
+            waitForDb = false;
+            return;
+        }
+
+        console.log("[" + Date.now() + "] Connected to Database");
+        dbConn.query(query, (err) => {
+            if(err){
+                console.log("[" + new Date().toISOString() + "] Data Failed To Store - " + query)
+            }
+            else{
+                console.log("[" + new Date().toISOString() + "] Settings Data Stored Successfully");
+            }
+
+            dbConn.end();
+            waitForDb = false;
+        });
+    })  
+}
+
+function checkDbBlock(){
+    if(waitForDb){
+        checkDbBlock();        
+    }
+    else{
+        return;
+    }
 }

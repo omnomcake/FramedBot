@@ -10,12 +10,15 @@ var optionCommand = new SlashCommandBuilder().setName('gamestart').setDescriptio
 var gameEndCommand = new SlashCommandBuilder().setName('gameend').setDescription('Ends the current game, posts scores, and starts a new game for the server.');
 
 var catchUpCommand = new SlashCommandBuilder().setName('catchup').setDescription('Catches up the discord bot on any results it may have missed')
+
+var setScoreChannel = new SlashCommandBuilder().setName('setscore').setDescription('Sets the current Channel as the Channel to report scores in when you end a game.')
+
 const commands = [
 	optionCommand,
     gameEndCommand,
-    catchUpCommand
-]
-	.map(command => command.toJSON());
+    catchUpCommand,
+    setScoreChannel
+].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
