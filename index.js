@@ -51,6 +51,7 @@ client.on('interactionCreate', async interaction => {
 
         if(commandName === 'gamestart'){            
             saveSettings(interaction); 
+            await interaction.reply({ content: 'Settings saved successfully.', ephemeral: true });
         }
         else if(commandName === 'gameend'){
             // using Dial Up hard coded for testing for now. 
@@ -104,6 +105,7 @@ client.on('interactionCreate', async interaction => {
                     client.channels.cache.get(channelId).send(string);
                 });
             }) 
+            await interaction.reply({ content: 'Game Ended, results processing.', ephemeral: true });
         }
         else if(commandName === 'catchup'){
             var guildId = interaction.guildId;
@@ -150,6 +152,7 @@ client.on('interactionCreate', async interaction => {
                     dbConn.end();
                 });
             })
+            await interaction.reply({ content: 'Catchup Processing.', ephemeral: true });
         }
         else if(commandName === 'setscore'){
             var guildId = interaction.guildId;
@@ -193,7 +196,9 @@ client.on('interactionCreate', async interaction => {
                         dbConn.end();
                     });
                 });
-            })              
+            });
+            
+            await interaction.reply({ content: 'Score Channel Set Successfully', ephemeral: true });
         }
     })
 
@@ -264,7 +269,6 @@ function saveSettings(interaction){
     dbConn.connect(function(err){
         if(err){
             console.log("[" + new Date().toISOString() + "] Unable to connect to DB");
-            waitForDb = false;
             return;
         }
 
@@ -278,7 +282,6 @@ function saveSettings(interaction){
             }
 
             dbConn.end();
-            waitForDb = false;
         });
     })  
 }
