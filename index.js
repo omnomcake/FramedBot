@@ -81,7 +81,7 @@ client.on('messageCreate', msg => {
         else if(commandName === 'gameend'){
             // using Dial Up hard coded for testing for now. 
             //var server = interaction.guildId;
-            var server = '477221061130190849';
+            var server = interaction.guildId;
 
             var query = 'call sp_endGame(\'' + server + '\')';
             var dbConn = connectDb();
@@ -99,9 +99,35 @@ client.on('messageCreate', msg => {
                         return;
                     }
                     
-                    var resultTable = results[1];
+                    var resultTable = results[1];                    
 
                     dbConn.end();
+                    
+                    var place = 1;
+                    var placeCount = 1;
+                    var string = 'Framed Scores for This Week:\n1. ';
+                    for (let i = 0; i < resultTable.length; i++){
+                        if(placeCount > 1){
+                            string += ", "
+                        }                 
+                        string += '<@' + resultTable[i]['framed_users_discord_id'] + '>';
+
+                        if(i < resultTable.length - 1 && resultTable[i]['total'] === resultTable[i + 1]['total']){
+                            placeCount++;
+                            continue;
+                        }
+                        else{
+                            string += ": " + resultTable[i]['total'] + '\n';
+                            placeCount = 1;
+                           
+                            if(i < resultTable.length - 1){
+                                place++;
+                                string += place + ". ";
+                            }                            
+                        }
+                    }
+                    var channelId = results[2][0]['framed_server_settings_scores_channel'];
+                    client.channels.cache.get(channelId).send(string);
                 });
             }) 
         }
