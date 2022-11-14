@@ -273,7 +273,7 @@ function checkMessage(msg){
 
 function saveSettings(interaction){
     var duration = interaction.options.getInteger('length') || 7;
-    var start = interaction.options.getString('date') || new Date().toISOString().split('T')[0];
+    var start = interaction.options.getInteger('gamenumber');
     var repeat = interaction.options.getBoolean('repeating') || true;
     var server = interaction.guildId;
     var serverName = interaction.guild.name;

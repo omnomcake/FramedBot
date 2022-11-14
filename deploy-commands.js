@@ -3,11 +3,10 @@ require('dotenv').config();
 
 
 var optionCommand = new SlashCommandBuilder().setName('gamestart').setDescription('Configures and starts a game for the server.')
-    .addIntegerOption(option => option.setName('length').setDescription('Duration of the game to start for this server in days. 7 if not set. 7 Minimum.'))
-    .addStringOption(option => option.setName('date').setDescription('Date to start the game - MM/DD format. Today if not set.'))
-    .addBooleanOption(option => option.setName('repeating').setDescription('Do you want the game to Repeat? Yes if not set.'));
+    .addIntegerOption(option => option.setName('gamenumber').setDescription('Framed game Number to start tracking from.').setRequired(true))
+    .addIntegerOption(option => option.setName('length').setDescription('Duration of the game to start for this server in days. 7 if not set. 7 Minimum.'));
     
-var gameEndCommand = new SlashCommandBuilder().setName('gameend').setDescription('Ends the current game, posts scores, and starts a new game for the server.');
+var gameEndCommand = new SlashCommandBuilder().setName('gameend').setDescription('Ends the current game, posts scores, and starts a new game for the server with configured length.');
 
 var catchUpCommand = new SlashCommandBuilder().setName('catchup').setDescription('Catches up the discord bot on any results it may have missed')
 
