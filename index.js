@@ -62,6 +62,7 @@ client.on('interactionCreate', async interaction => {
             await interaction.reply({ content: 'Settings saved successfully.', ephemeral: true });
         }
         else if(commandName === 'gameend'){
+            await interaction.reply({ content: 'Game Ended, results processing.', ephemeral: true });
             // using Dial Up hard coded for testing for now. 
             var server = interaction.guildId;
             channel = interaction.channelId;
@@ -76,16 +77,23 @@ client.on('interactionCreate', async interaction => {
                 }
 
                 console.log("[" + Date.now() + "] Connected to Database");
-                dbConn.query(query, (err, results) => {
+                dbConn.query(query, async (err, results) => {
                     if(err){
                         console.log("[" + new Date().toISOString() + "] Data Failed To Retrieve - " + query);
                         return;
                     }
-                    if(results[0][0]['NO SETTINGS'] === undefined){
+                    if(results[0].length > 0 && results[0][0]['NO SETTINGS'] === undefined){
                         
                     }
                     else{
-                        client.channels.cache.get(channel).send('<@' + userId + '> No Scores Channel Found - Use /setscore function in the channel you want to report scores to.');
+                        try{
+                            client.channels.cache.get(channel).send('<@' + userId + '> No Scores Channel Found - Use /setscore function in the channel you want to report scores to.');
+                        }
+                        catch(e){
+                            if(e.message === 'Missing Permissions'){
+                                client.users.cache.get(userId).send('FramedBot seems to be missing permissions to write to the channel you send the End Game command in. Ensure that the permissions are set appropriately.')
+                            }
+                        }                        
                         return;
                     }
 
@@ -117,12 +125,28 @@ client.on('interactionCreate', async interaction => {
                         }
                     }
                     var channelId = results[2][0]['framed_server_settings_scores_channel'];
-                    client.channels.cache.get(channelId).send(string);
+                    try{
+                        await client.channels.cache.get(channelId).send(string);
+                    }
+                    catch(e){
+                        if(e.message === 'Missing Permissions'){
+                            client.users.cache.get(userId).send('FramedBot seems to be missing permissions to write to your score channel. Ensure that the permissions are set appropriately.')
+                        }
+                    }
                 });
             }) 
-            await interaction.reply({ content: 'Game Ended, results processing.', ephemeral: true });
+
+            try{
+                await interaction.reply({ content: 'Game Ended, results processing.', ephemeral: true });
+            }
+            catch(e){
+                if(e.message === 'Missing Permissions'){
+                    client.users.cache.get(userId).send('FramedBot seems to be missing permissions to reply to slash commands. Ensure that the permissions are set appropriately.')
+                }
+            }            
         }
         else if(commandName === 'catchup'){
+            await interaction.reply({ content: 'Catchup Processing.', ephemeral: true });
             var guildId = interaction.guildId;
             channel = interaction.channelId;
             lastMessageId = channel.lastMessageId;
@@ -169,7 +193,7 @@ client.on('interactionCreate', async interaction => {
                     dbConnection.end();
                 });
             })
-            await interaction.reply({ content: 'Catchup Processing.', ephemeral: true });
+            
         }
         else if(commandName === 'setscore'){
             var guildId = interaction.guildId;
